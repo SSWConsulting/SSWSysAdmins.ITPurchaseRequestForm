@@ -95,6 +95,9 @@ $Page2 = New-UDPage -Url "/Products/" -Endpoint {
     # Creates the session variable to hold the Purchase Description
     $Session:FinalDescription = ""
 
+    # Creates the session variable to hold the Email Subject
+    $Session:FinalSubject = ""
+
     function Set-InputNumber {
         param (
             $InputNumber
@@ -135,19 +138,37 @@ $Page2 = New-UDPage -Url "/Products/" -Endpoint {
                     New-UDInputAction -Toast "Purchase Description missing, description is mandatory, go back and fill it"
                     break
                 } 
-                Set-UDElement -id "NewProductButton" -Content {         
-                    New-UDButton -Text "Add New Product" -OnClick {
-                        $Session:InputsInScreen += 1            
-                        Set-UDElement -Id "results$Session:InputsInScreen" -Content {
-                            Set-InputNumber $Session:InputsInScreen
-                        
-                        }
-                    }
+                Set-UDElement -id "SubjectField" -Content {         
+                    $Session:Subject
                 }
                 $Session:FinalDescription = $PurchaseDescription
             }
         }
     }
+
+    $Session:Subject = New-UDInput -Title "Email Subject" -Id "Subject" -Content {
+        New-UDInputField -Type 'textarea' -Name "EmailSubject" -Placeholder "Subject will always start with 'Purchase Please - Request for _____', fill in the blank"
+    } -Endpoint {
+        param($EmailSubject)
+        
+        # EmailSubject validation
+        if ($EmailSubject -eq $null -or $EmailSubject -like "null" -or $EmailSubject -eq "") {
+            New-UDInputAction -Toast "Email Subject missing, subject is mandatory, go back and fill it"
+            break
+        } 
+        Set-UDElement -id "NewProductButton" -Content {         
+            New-UDButton -Text "Add New Product" -OnClick {
+                $Session:InputsInScreen += 1            
+                Set-UDElement -Id "results$Session:InputsInScreen" -Content {
+                    Set-InputNumber $Session:InputsInScreen
+                        
+                }
+            }
+        }
+        $Session:FinalSubject = $EmailSubject
+    }
+        
+
     
     # TODO: Find a better way to do this, instead of copying the same thing in the different variables.
     # Look...I'm gonna do something here that might be stupid, but it is the only way I can see right now
@@ -1158,7 +1179,11 @@ $Page2 = New-UDPage -Url "/Products/" -Endpoint {
 
     # ---------- FINISh COPYING SAME FORMS IN DIFFERENT VARIABLES
 
-        
+    New-UDRow -Columns {
+        New-UDColumn -Size 12 {
+            New-UDElement -tag "div" -id "SubjectField"
+        }  
+    }
     New-UDRow -Columns {
         New-UDColumn -Size 12 {
             New-UDElement -Tag "div" -Id "results1"
@@ -1207,6 +1232,7 @@ $Page2 = New-UDPage -Url "/Products/" -Endpoint {
     }
 
 }
+
 
 $Page3 = New-UDPage -Url "/Cart/" -Endpoint {
     param()
@@ -1349,8 +1375,9 @@ $Page3 = New-UDPage -Url "/Cart/" -Endpoint {
     <br>$OwnName</p>
     <p>-- Powered by SSW.SSWITPurchaseRequest<br> Server: $env:computername </p></div>
 "@
+                $OwnSubject = "Purchase Please - Request for $Session:FinalSubject"
     
-                Send-MailMessage -From "info@ssw.com.au" -to $OwnEmail -Subject "Purchase Please - Request for" -Body $bodyhtml2 -SmtpServer "ssw-com-au.mail.protection.outlook.com" -BodyAsHtml
+                Send-MailMessage -From "info@ssw.com.au" -to $OwnEmail -Subject $OwnSubject -Body $bodyhtml2 -SmtpServer "ssw-com-au.mail.protection.outlook.com" -BodyAsHtml
                 New-UDInputAction -Toast "Email sent to SSWITPurchaseRequest@ssw.zendesk.com!"
             }
         }
